@@ -66,3 +66,35 @@ def calculate_indicators(group):
 df = df.groupby('Ticker').apply(calculate_indicators)
 
 # Now df contains the original data along with the new features for each Ticker
+
+# Function to calculate additional features related to NAV and Price dislocation
+def calculate_nav_price_features(group):
+    # Calculate the spread and percentage spread between NAV and Price
+    group['NAV_Price_Spread'] = group['Mid_NAV'] - group['Mid_Price']
+    group['NAV_Price_Spread_Percent'] = (group['NAV_Price_Spread'] / group['Mid_Price']) * 100
+
+    # Calculate a moving average of the spread
+    group['NAV_Price_Spread_MA10'] = group['NAV_Price_Spread'].rolling(window=10).mean()
+
+    return group
+
+# Function to generate trading signals and signal strength
+def generate_trading_signals(group):
+    # Define thresholds for signal generation
+    spread_threshold = 0.5  # example threshold, needs to be optimized
+    strength_threshold = 0.2  # example threshold for signal strength
+
+    # Generate signals based on the spread
+    group['Trade_Signal'] = np.where(group['NAV_Price_Spread_Percent'] > spread_threshold, 'Buy', 
+                                     np.where(group['NAV_Price_Spread_Percent'] < -spread_threshold, 'Sell', 'Hold'))
+
+    # Calculate signal strength based on the magnitude of the spread percentage
+    group['Signal_Strength'] = np.abs(group['NAV_Price_Spread_Percent']) / strength_threshold
+
+    return group
+
+# Apply the functions to each Ticker group
+df = df.groupby('Ticker').apply(calculate_nav_price_features)
+df = df.groupby('Ticker').apply(generate_trading_signals)
+
+# Now df contains the original data, additional features, and trading signals
