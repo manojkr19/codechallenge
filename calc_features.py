@@ -98,3 +98,30 @@ df = df.groupby('Ticker').apply(calculate_nav_price_features)
 df = df.groupby('Ticker').apply(generate_trading_signals)
 
 # Now df contains the original data, additional features, and trading signals
+
+# Assuming df is your DataFrame with columns ['Timestamp', 'Ticker', 'Price_Bid', 'Price_Ask', ...]
+# And 'Timestamp' is a datetime column
+
+def calculate_rolling_changes(group):
+    # Calculate Mid Price
+    group['Mid_Price'] = (group['Price_Bid'] + group['Price_Ask']) / 2
+
+    # Set the Timestamp as the index for rolling calculations
+    group = group.set_index('Timestamp')
+
+    # Calculate rolling changes for different time intervals
+    # Using time-aware rolling windows
+    time_intervals = ['5T', '15T', '30T', '60T']  # Time intervals in minutes with 'T' as the offset alias
+    for interval in time_intervals:
+        group[f'Change_{interval}'] = group['Mid_Price'].pct_change().rolling(interval).sum()
+
+    # Reset index after calculations
+    group = group.reset_index()
+
+    return group
+
+# Apply the function to each Ticker group
+df = df.groupby('Ticker', group_keys=False).apply(calculate_rolling_changes)
+
+# Now df contains the original data along with the new rolling change features
+
